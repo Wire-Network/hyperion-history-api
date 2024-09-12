@@ -45,7 +45,6 @@
     "commander": "^12.0.0",
     "cross-fetch": "^4.0.0",
     "elliptic": "^6.5.4",
-    "eosjs-ecc": "^4.0.7",
     "ethers": "^5.7.0",
     "fast-json-stringify": "2.7.13",
     "fastify": "3.29.5",
