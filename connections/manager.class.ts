@@ -1,5 +1,5 @@
 import {ConfigurationModule} from "../modules/config";
-import {JsonRpc} from "../addons/wirejs";
+import {JsonRpc} from "../addons/wirejs-native";
 import got from "got";
 import {Client} from '@elastic/elasticsearch'
 import {HyperionConnections} from "../interfaces/hyperionConnections";

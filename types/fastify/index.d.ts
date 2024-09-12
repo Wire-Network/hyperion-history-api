@@ -1,6 +1,6 @@
 import {Client} from "@elastic/elasticsearch";
 import {ConnectionManager} from "../../connections/manager.class";
-import {Api, JsonRpc} from "../../addons/wirejs";
+import {Api, JsonRpc} from "../../addons/wirejs-native";
 import {CacheManager} from "../../api/helpers/cacheManager";
 import {FastifyRedis} from "@fastify/redis";
 

@@ -1,6 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from "fastify";
 import {timedQuery} from "../../../helpers/functions";
-import {Numeric} from "../../../../addons/wirejs";
+import {Numeric} from "../../../../addons/wirejs-native";
 import {getSkipLimit} from "../../v2-history/get_actions/functions";
 
 function invalidKey() {

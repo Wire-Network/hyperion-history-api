@@ -4,7 +4,7 @@ import {cp, mkdir, readdir, readFile, rm, writeFile} from "fs/promises";
 import {HyperionConfig} from "../interfaces/hyperionConfig";
 import {HyperionConnections} from "../interfaces/hyperionConnections";
 import {copyFileSync, existsSync, rmSync} from "fs";
-import {JsonRpc} from "../addons/wirejs";
+import {JsonRpc} from "../addons/wirejs-native";
 
 // import fetch from "cross-fetch";
 

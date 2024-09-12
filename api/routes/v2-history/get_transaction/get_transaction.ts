@@ -1,6 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from "fastify";
 import {mergeActionMeta, timedQuery} from "../../../helpers/functions";
-import { RpcInterfaces } from "../../../../addons/wirejs";
+import { RpcInterfaces } from "../../../../addons/wirejs-native";
 
 async function getTransaction(fastify: FastifyInstance, request: FastifyRequest) {
 	const redis = fastify.redis;

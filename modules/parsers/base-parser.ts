@@ -5,7 +5,7 @@ import DSPoolWorker from "../../workers/ds-pool";
 import {TrxMetadata} from "../../interfaces/trx-metadata";
 import {ActionTrace} from "../../interfaces/action-trace";
 import {debugLog, hLog} from "../../helpers/common_functions";
-import {Serialize} from "../../addons/wirejs";
+import {Serialize} from "../../addons/wirejs-native";
 import {HyperionActionAct} from "../../interfaces/hyperion-action";
 
 export abstract class BaseParser {

@@ -1,5 +1,5 @@
 import { ApiResponse, Client } from "@elastic/elasticsearch";
-import { JsonRpc, RpcInterfaces, Numeric } from "../addons/wirejs";
+import { JsonRpc, RpcInterfaces, Numeric } from "../addons/wirejs-native";
 import { ConnectionManager } from "../connections/manager.class";
 import { ConfigurationModule } from "./config";
 import { HyperionModuleLoader } from "./loader";

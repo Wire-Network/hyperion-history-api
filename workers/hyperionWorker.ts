@@ -2,7 +2,7 @@ import {HyperionConfig} from "../interfaces/hyperionConfig";
 import {ConnectionManager} from "../connections/manager.class";
 import {HyperionModuleLoader} from "../modules/loader";
 import {ConfigurationModule, Filters} from "../modules/config";
-import {JsonRpc} from "../addons/wirejs";
+import {JsonRpc} from "../addons/wirejs-native";
 import {Client} from "@elastic/elasticsearch";
 import {Channel, ConfirmChannel} from "amqplib/callback_api";
 import {EventEmitter} from "events";

@@ -2,7 +2,7 @@ import {FastifyInstance, FastifyReply, FastifyRequest} from "fastify";
 import {timedQuery} from "../../../helpers/functions";
 import {createHash} from "crypto";
 import {Search} from "@elastic/elasticsearch/api/requestParams";
-import { Numeric } from "../../../../addons/wirejs";
+import { Numeric } from "../../../../addons/wirejs-native";
 
 function convertToLegacyKey(block_signing_key: string) {
     if (block_signing_key.startsWith("PUB_K1_")) {

@@ -1,5 +1,5 @@
 import {ApiResponse, Client} from "@elastic/elasticsearch";
-import {Serialize} from "../addons/wirejs";
+import {Serialize} from "../addons/wirejs-native";
 import {existsSync} from "fs";
 import {join} from "path";
 

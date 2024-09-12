@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {Client, estypes} from '@elastic/elasticsearch';
 // @ts-ignore
 import cliProgress from 'cli-progress';
-import {JsonRpc} from "../addons/wirejs";
+import {JsonRpc} from "../addons/wirejs-native";
 import fetch from 'cross-fetch';
 import {existsSync, mkdirSync, writeFileSync} from 'fs';
 import {HyperionBlock} from './repair-cli/interfaces.js';

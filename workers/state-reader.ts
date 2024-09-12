@@ -1,6 +1,6 @@
 import {HyperionWorker} from "./hyperionWorker";
 import {cargo, QueueObject} from "async";
-import {Serialize} from "../addons/wirejs";
+import {Serialize} from "../addons/wirejs-native";
 import {debugLog, deserialize, hLog, serialize} from "../helpers/common_functions";
 import {parseInt} from "lodash";
 

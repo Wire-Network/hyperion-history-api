@@ -6,7 +6,7 @@ import {join, resolve} from "path";
 import {existsSync, readdirSync, readFileSync} from "fs";
 import flatstr from 'flatstr';
 import IORedis from "ioredis";
-import { Serialize } from "../addons/wirejs";
+import { Serialize } from "../addons/wirejs-native";
 
 const abi_remapping = {
     "_Bool": "bool",

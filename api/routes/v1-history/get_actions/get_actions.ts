@@ -1,6 +1,6 @@
 import {FastifyInstance, FastifyReply, FastifyRequest} from "fastify";
 import {mergeActionMeta, timedQuery} from "../../../helpers/functions";
-import {Serialize, JsonRpc} from "../../../../addons/wirejs";
+import {Serialize, JsonRpc} from "../../../../addons/wirejs-native";
 import {hLog} from "../../../../helpers/common_functions";
 import {Abieos} from "../../../../addons/node-abieos";
 import {ApiResponse} from "@elastic/elasticsearch";

@@ -1,5 +1,5 @@
 import {HyperionWorker} from "./hyperionWorker";
-import {Api, Serialize, RpcInterfaces} from "../addons/wirejs";
+import {Api, Serialize, RpcInterfaces} from "../addons/wirejs-native";
 import {ApiResponse} from "@elastic/elasticsearch";
 import {cargo, queue} from 'async';
 import {debugLog, hLog} from "../helpers/common_functions";

@@ -1,6 +1,6 @@
 import {FastifyInstance, FastifyPluginOptions} from "fastify";
 import fp from "fastify-plugin";
-import { Api } from "../../addons/wirejs";
+import { Api } from "../../addons/wirejs-native";
 
 export default fp(async (fastify: FastifyInstance, options: FastifyPluginOptions): Promise<void> => {
     const rpc = fastify.manager.nodeosJsonRPC;
