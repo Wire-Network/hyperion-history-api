@@ -76,7 +76,6 @@ scripts/hpm.js.map
 plugins/.state.json
 plugins/repos
 plugins/*.js
-.gitmodules
 
 docker/redis/data
 docker/elasticsearch/data
@@ -93,5 +92,3 @@ scripts/hyp-repair.js.map
 
 scripts/repair-cli/*.js
 scripts/repair-cli/*.js.map
-
-addons/node-abieos

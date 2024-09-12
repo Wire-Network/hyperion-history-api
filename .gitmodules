@@ -1,0 +1,4 @@
+[submodule "addons/node-abieos"]
+	path = addons/node-abieos
+	url = ../node-abieos.git
+	branch = rename

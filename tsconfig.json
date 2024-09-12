@@ -12,19 +12,8 @@
         "typeRoots": [
             "node_modules/@types",
             "types"
-        ],
-        "paths": {
-            "wirejs": [
-                "./addons/wirejs"
-                // "../wirejs/src/index"
-            ]
-        }
+        ]
     },
-    "references": [
-        {
-            "path": "./addons/wirejs"
-        }
-    ],
     "exclude": [
         "node_modules",
         "hyperion-explorer",
