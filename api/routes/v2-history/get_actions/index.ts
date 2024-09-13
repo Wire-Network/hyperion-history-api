@@ -71,7 +71,7 @@ export const getActionResponseSchema = {
 export default function (fastify: FastifyInstance, opts: any, next) {
     const schema: FastifySchema = {
         description: 'get actions based on notified account. this endpoint also accepts generic filters based on indexed fields' +
-            ' (e.g. act.authorization.actor=eosio or act.name=delegatebw), if included they will be combined with a AND operator',
+            ' (e.g. act.authorization.actor=sysio or act.name=delegatebw), if included they will be combined with a AND operator',
         summary: 'get root actions',
         tags: ['history'],
         querystring: extendQueryStringSchema({

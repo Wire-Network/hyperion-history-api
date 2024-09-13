@@ -509,8 +509,8 @@ export default class MainDSWorker extends HyperionWorker {
         if (trace['action_traces'][0] && trace['action_traces'][0].length === 2) {
             first_action = trace['action_traces'][0][1];
 
-            // replace first action if the root is eosio.null::nonce
-            if (first_action.act.account === this.conf.settings.eosio_alias + '.null' && first_action.act.name === 'nonce') {
+            // replace first action if the root is sysio.null::nonce
+            if (first_action.act.account === this.conf.settings.sysio_alias + '.null' && first_action.act.name === 'nonce') {
                 if (trace['action_traces'][1] && trace['action_traces'][1].length === 2) {
                     first_action = trace['action_traces'][1][1];
                 }
@@ -1132,7 +1132,7 @@ export default class MainDSWorker extends HyperionWorker {
             }
 
             if (this.conf.features.index_all_deltas ||
-                (payload.code === this.conf.settings.eosio_alias || payload.table === 'accounts')) {
+                (payload.code === this.conf.settings.sysio_alias || payload.table === 'accounts')) {
 
                 payload['@timestamp'] = block_ts;
                 payload['present'] = row.present;
@@ -1247,7 +1247,7 @@ export default class MainDSWorker extends HyperionWorker {
                     hLog(`Failed to process ABI from ${account['name']} at ${block_num}: ${e.message}`);
                 }
             } else {
-                if (account.name === 'eosio') {
+                if (account.name === 'sysio') {
                     hLog(`---------- ${block_num} ----------------`);
                     hLog(account);
                 }
@@ -1609,8 +1609,8 @@ export default class MainDSWorker extends HyperionWorker {
     }
 
     private async populateTableHandlers() {
-        const EOSIO_ALIAS = this.conf.settings.eosio_alias;
-        this.tableHandlers[EOSIO_ALIAS + ':voters'] = (delta) => {
+        const SYSIO_ALIAS = this.conf.settings.sysio_alias;
+        this.tableHandlers[SYSIO_ALIAS + ':voters'] = (delta) => {
             delta['@voters'] = {};
             delta['@voters']['is_proxy'] = delta.data['is_proxy'];
             delete delta.data['is_proxy'];
@@ -1634,12 +1634,12 @@ export default class MainDSWorker extends HyperionWorker {
             }
         };
 
-        this.tableHandlers[EOSIO_ALIAS + ':global'] = (delta) => {
+        this.tableHandlers[SYSIO_ALIAS + ':global'] = (delta) => {
             delta['@global'] = delta['data'];
             delete delta['data'];
         };
 
-        this.tableHandlers[EOSIO_ALIAS + ':producers'] = (delta) => {
+        this.tableHandlers[SYSIO_ALIAS + ':producers'] = (delta) => {
             const data = delta['data'];
             if (data) {
                 delta['@producers'] = {
@@ -1651,7 +1651,7 @@ export default class MainDSWorker extends HyperionWorker {
             }
         };
 
-        this.tableHandlers[EOSIO_ALIAS + ':userres'] = (delta) => {
+        this.tableHandlers[SYSIO_ALIAS + ':userres'] = (delta) => {
             const data = delta['data'];
             if (data['net_weight'] && data['cpu_weight']) {
                 const net = parseFloat(data['net_weight'].split(" ")[0]);
@@ -1667,7 +1667,7 @@ export default class MainDSWorker extends HyperionWorker {
             }
         };
 
-        this.tableHandlers[EOSIO_ALIAS + ':delband'] = (delta) => {
+        this.tableHandlers[SYSIO_ALIAS + ':delband'] = (delta) => {
             const data = delta['data'];
             if (data['net_weight'] && data['cpu_weight']) {
                 const net = parseFloat(data['net_weight'].split(" ")[0]);
@@ -1683,7 +1683,7 @@ export default class MainDSWorker extends HyperionWorker {
             }
         };
 
-        this.tableHandlers[EOSIO_ALIAS + '.msig:proposal'] = async (delta) => {
+        this.tableHandlers[SYSIO_ALIAS + '.msig:proposal'] = async (delta) => {
             // decode packed_transaction
             delta['@proposal'] = {
                 proposal_name: delta['data']['proposal_name']
@@ -1697,7 +1697,7 @@ export default class MainDSWorker extends HyperionWorker {
             delete delta['data'];
         };
 
-        this.tableHandlers[EOSIO_ALIAS + '.msig:approvals'] = (delta) => {
+        this.tableHandlers[SYSIO_ALIAS + '.msig:approvals'] = (delta) => {
             delta['@approvals'] = {
                 proposal_name: delta['data']['proposal_name'],
                 requested_approvals: delta['data']['requested_approvals'],
@@ -1709,7 +1709,7 @@ export default class MainDSWorker extends HyperionWorker {
             }
         };
 
-        this.tableHandlers[EOSIO_ALIAS + '.msig:approvals2'] = (delta) => {
+        this.tableHandlers[SYSIO_ALIAS + '.msig:approvals2'] = (delta) => {
             delta['@approvals'] = {
                 proposal_name: delta['data']['proposal_name'],
                 requested_approvals: delta['data']['requested_approvals'].map((item) => {

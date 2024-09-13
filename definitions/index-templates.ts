@@ -106,7 +106,7 @@ export const action = {
                 }
             },
 
-            // eosio::newaccount
+            // sysio::newaccount
             "@newaccount": {
                 "properties": {
                     "active": {"type": "object"},
@@ -115,7 +115,7 @@ export const action = {
                 }
             },
 
-            // eosio::updateauth
+            // sysio::updateauth
             "@updateauth": {
                 "properties": {
                     "permission": {"type": "keyword"},
@@ -127,7 +127,7 @@ export const action = {
             // *::transfer
             "@transfer": transferProps,
 
-            // eosio::unstaketorex
+            // sysio::unstaketorex
             "@unstaketorex": {
                 "properties": {
                     "owner": {"type": "keyword"},
@@ -136,7 +136,7 @@ export const action = {
                 }
             },
 
-            // eosio::buyrex
+            // sysio::buyrex
             "@buyrex": {
                 "properties": {
                     "from": {"type": "keyword"},
@@ -144,7 +144,7 @@ export const action = {
                 }
             },
 
-            // eosio::buyram
+            // sysio::buyram
             "@buyram": {
                 "properties": {
                     "payer": {"type": "keyword"},
@@ -153,7 +153,7 @@ export const action = {
                 }
             },
 
-            // eosio::buyrambytes
+            // sysio::buyrambytes
             "@buyrambytes": {
                 "properties": {
                     "payer": {"type": "keyword"},
@@ -162,7 +162,7 @@ export const action = {
                 }
             },
 
-            // eosio::delegatebw
+            // sysio::delegatebw
             "@delegatebw": {
                 "properties": {
                     "from": {"type": "keyword"},
@@ -174,7 +174,7 @@ export const action = {
                 }
             },
 
-            // eosio::undelegatebw
+            // sysio::undelegatebw
             "@undelegatebw": {
                 "properties": {
                     "from": {"type": "keyword"},
@@ -231,12 +231,12 @@ export const delta = {
             "data": {"enabled": false},
             "value": {"enabled": false},
 
-            // eosio.msig::approvals
+            // sysio.msig::approvals
             "@approvals.proposal_name": {"type": "keyword"},
             "@approvals.provided_approvals": {"type": "object"},
             "@approvals.requested_approvals": {"type": "object"},
 
-            // eosio.msig::proposal
+            // sysio.msig::proposal
             "@proposal.proposal_name": {"type": "keyword"},
             "@proposal.transaction": {"enabled": false},
 
@@ -244,7 +244,7 @@ export const delta = {
             "@accounts.amount": {"type": "float"},
             "@accounts.symbol": {"type": "keyword"},
 
-            // eosio::voters
+            // sysio::voters
             "@voters.is_proxy": {"type": "boolean"},
             "@voters.producers": {"type": "keyword"},
             "@voters.last_vote_weight": {"type": "double"},
@@ -252,12 +252,12 @@ export const delta = {
             "@voters.staked": {"type": "float"},
             "@voters.proxy": {"type": "keyword"},
 
-            // eosio::producers
+            // sysio::producers
             "@producers.total_votes": {"type": "double"},
             "@producers.is_active": {"type": "boolean"},
             "@producers.unpaid_blocks": {"type": "long"},
 
-            // eosio::global
+            // sysio::global
             "@global": {
                 "properties": {
                     "last_name_close": {"type": "date"},

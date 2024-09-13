@@ -77,11 +77,6 @@ plugins/.state.json
 plugins/repos
 plugins/*.js
 
-docker/redis/data
-docker/elasticsearch/data
-docker/rabbitmq/data
-docker/eosio/data
-
 configuration_backups
 
 scripts/hyp-config.js

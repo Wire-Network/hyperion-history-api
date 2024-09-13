@@ -13,7 +13,7 @@ export class ConfigurationModule {
 
 	public config: HyperionConfig;
 	public connections: HyperionConnections;
-	public EOSIO_ALIAS: string;
+	public SYSIO_ALIAS: string;
 
 	public filters: Filters = {
 		action_blacklist: new Set(),
@@ -46,20 +46,20 @@ export class ConfigurationModule {
 			this.config.indexer.fetch_block = false;
 		}
 
-		this.EOSIO_ALIAS = 'eosio';
-		if (this.config.settings.eosio_alias) {
-			this.EOSIO_ALIAS = this.config.settings.eosio_alias;
+		this.SYSIO_ALIAS = 'sysio';
+		if (this.config.settings.sysio_alias) {
+			this.SYSIO_ALIAS = this.config.settings.sysio_alias;
 		} else {
-			this.config.settings.eosio_alias = 'eosio';
+			this.config.settings.sysio_alias = 'sysio';
 		}
 
-		// append default blacklists (eosio::onblock & eosio.null)
-		// this.filters.action_blacklist.add(`${this.config.settings.chain}::${this.EOSIO_ALIAS}::onblock`);
-		this.filters.action_blacklist.add(`${this.config.settings.chain}::${this.EOSIO_ALIAS}.null::*`);
+		// append default blacklists (sysio::onblock & sysio.null)
+		// this.filters.action_blacklist.add(`${this.config.settings.chain}::${this.SYSIO_ALIAS}::onblock`);
+		this.filters.action_blacklist.add(`${this.config.settings.chain}::${this.SYSIO_ALIAS}.null::*`);
 
-		// this.filters.delta_blacklist.add(`${this.config.settings.chain}::${this.EOSIO_ALIAS}::global`);
-		// this.filters.delta_blacklist.add(`${this.config.settings.chain}::${this.EOSIO_ALIAS}::global2`);
-		// this.filters.delta_blacklist.add(`${this.config.settings.chain}::${this.EOSIO_ALIAS}::global3`);
+		// this.filters.delta_blacklist.add(`${this.config.settings.chain}::${this.SYSIO_ALIAS}::global`);
+		// this.filters.delta_blacklist.add(`${this.config.settings.chain}::${this.SYSIO_ALIAS}::global2`);
+		// this.filters.delta_blacklist.add(`${this.config.settings.chain}::${this.SYSIO_ALIAS}::global3`);
 
 		// append user blacklists
 		if (this.config.blacklists) {

@@ -34,7 +34,7 @@ export interface MainSettings {
     bp_monitoring?: boolean;
     preview: boolean;
     chain: string;
-    eosio_alias: string;
+    sysio_alias: string;
     parser: string;
     auto_stop: number;
     index_version: string;

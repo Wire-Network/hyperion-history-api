@@ -1978,7 +1978,7 @@ export class HyperionMaster {
                 block_num: acc.head_block_num,
                 symbol: arr[1],
                 amount: parseFloat(arr[0]),
-                code: this.conf.settings.eosio_alias + '.token',
+                code: this.conf.settings.sysio_alias + '.token',
                 scope: accountName,
                 present: 2
             };
@@ -2077,9 +2077,9 @@ export class HyperionMaster {
 
     async getRows(start_at?) {
         const data = await this.manager.nodeosJsonRPC.get_table_rows({
-            code: this.conf.settings.eosio_alias,
+            code: this.conf.settings.sysio_alias,
             table: 'voters',
-            scope: this.conf.settings.eosio_alias,
+            scope: this.conf.settings.sysio_alias,
             key_type: "name",
             lower_bound: start_at,
             upper_bound: "",

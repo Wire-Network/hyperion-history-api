@@ -15,7 +15,7 @@ function convertToLegacyKey(block_signing_key: string) {
                 .digest()
                 .slice(0, 4)
         ]);
-        return "EOS" + Numeric.binaryToBase58(merged);
+        return "SYS" + Numeric.binaryToBase58(merged);
     } else {
         return block_signing_key;
     }

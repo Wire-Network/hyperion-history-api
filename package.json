@@ -1,7 +1,7 @@
 {
   "name": "hyperion-history",
   "version": "3.3.10",
-  "description": "Scalable Full History API Solution for EOSIO based blockchains",
+  "description": "Scalable Full History API Solution for SYSIO based blockchains",
   "main": "launcher.js",
   "scripts": {
     "logs": "pm2 logs Indexer",

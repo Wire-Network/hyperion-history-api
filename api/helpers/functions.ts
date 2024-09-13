@@ -735,36 +735,36 @@ export function addSharedSchemas(fastify: FastifyInstance) {
     fastify.addSchema({
         $id: "Signature",
         type: "string",
-        description: "String representation of an EOSIO compatible cryptographic signature",
+        description: "String representation of an SYSIO compatible cryptographic signature",
         pattern: "^SIG_([RK]1|WA)_[1-9A-HJ-NP-Za-km-z]+$",
         title: "Signature"
     })
 
     fastify.addSchema({
         $id: "AccountName",
-        description: "String representation of an EOSIO compatible account name",
+        description: "String representation of an SYSIO compatible account name",
         "anyOf": [
             {
                 "type": "string",
-                "description": "String representation of privileged EOSIO name type",
-                "pattern": "^(eosio[\\.][a-z1-5]{1,6})([a-j]{1})?$",
+                "description": "String representation of privileged SYSIO name type",
+                "pattern": "^(sysio[\\.][a-z1-5]{1,6})([a-j]{1})?$",
                 "title": "NamePrivileged"
             },
             {
                 "type": "string",
-                "description": "String representation of basic EOSIO name type, must be 12 characters and contain only a-z and 0-5",
+                "description": "String representation of basic SYSIO name type, must be 12 characters and contain only a-z and 0-5",
                 "pattern": "^([a-z]{1}[a-z1-5]{11})([a-j]{1})?$",
                 "title": "NameBasic"
             },
             {
                 "type": "string",
-                "description": "String representation of EOSIO bid name type, 1-12 characters and only a-z and 0-5 are allowed",
+                "description": "String representation of SYSIO bid name type, 1-12 characters and only a-z and 0-5 are allowed",
                 "pattern": "^([a-z1-5]{1,12})([a-j]{1})?$",
                 "title": "NameBid"
             },
             {
                 "type": "string",
-                "description": "String representation of EOSIO name type",
+                "description": "String representation of SYSIO name type",
                 "pattern": "^([a-z1-5]{1}[a-z1-5\\.]{0,10}[a-z1-5]{1})([a-j]{1})?$",
                 "title": "NameCatchAll"
             }

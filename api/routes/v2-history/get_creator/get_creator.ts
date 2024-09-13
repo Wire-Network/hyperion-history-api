@@ -13,7 +13,7 @@ async function getCreator(fastify: FastifyInstance, request: FastifyRequest) {
         trx_id: '',
     };
 
-    if (query.account === fastify.manager.config.settings.eosio_alias) {
+    if (query.account === fastify.manager.config.settings.sysio_alias) {
         try {
             const genesisBlock = await fastify.wirejs.rpc.get_block(1);
             if (genesisBlock) {

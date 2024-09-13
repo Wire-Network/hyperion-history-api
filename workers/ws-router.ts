@@ -4,7 +4,7 @@ import {Server, Socket} from "socket.io";
 import {checkDeltaFilter, checkFilter, hLog} from "../helpers/common_functions";
 import {createServer} from "http";
 
-const greylist = ['eosio.token'];
+const greylist = ['sysio.token'];
 
 export default class WSRouter extends HyperionWorker {
 

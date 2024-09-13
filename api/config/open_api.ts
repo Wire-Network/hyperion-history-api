@@ -7,7 +7,7 @@ export function generateOpenApiConfig(config: HyperionConfig) {
 
     let description = `
 <img height="64" src="https://eosrio.io/hyperion.png">
-### Scalable Full History API Solution for EOSIO based blockchains
+### Scalable Full History API Solution for SYSIO based blockchains
 *Made with ♥️ by [EOS Rio](https://eosrio.io/)*
 ***
 #### Current Chain: ${config.api.chain_name} <img style="transform: translateY(8px)" height="32" src="${config.api.chain_logo_url}">
