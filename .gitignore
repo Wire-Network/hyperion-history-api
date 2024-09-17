@@ -57,6 +57,7 @@ connections/**/*.js.map
 
 definitions/**/*.js
 definitions/**/*.js.map
+!ecosystem_settings.js
 
 workers/**/*.js
 workers/**/*.js.map
@@ -69,6 +70,7 @@ interfaces/**/*.js.map
 
 modules/**/*.js
 modules/**/*.js.map
+!modules/action_data/**
 
 scripts/hpm.js
 scripts/hpm.js.map

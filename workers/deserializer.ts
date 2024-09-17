@@ -1,13 +1,18 @@
 import {HyperionWorker} from "./hyperionWorker";
-import {Api, Serialize, RpcInterfaces} from "../addons/wirejs-native";
+import {Api} from "../addons/wirejs-native";
 import {ApiResponse} from "@elastic/elasticsearch";
 import {cargo, queue} from 'async';
+import {Serialize} from "../addons/wirejs-native";
+import {Action, Type} from "../addons/wirejs-native/wirejs-serialize";
 import {debugLog, hLog} from "../helpers/common_functions";
 import {createHash} from "crypto";
 import {Message, Options} from "amqplib";
+
 import flatstr from 'flatstr';
+
 import {index_queues} from "../definitions/index-queues";
 import {AbiDefinitions} from "../definitions/abi_def";
+import {Abi} from "../addons/wirejs-native/wirejs-rpc-interfaces";
 
 const abi_remapping = {
     "_Bool": "bool"
@@ -61,7 +66,7 @@ export default class MainDSWorker extends HyperionWorker {
     private consumerQueue;
     private preIndexingQueue;
     private abi: any;
-    public types: Map<string, Serialize.Type>;
+    public types: Map<string, Type>;
     private tables = new Map();
     private allowStreaming = false;
     private dsPoolMap = {};
@@ -363,7 +368,7 @@ export default class MainDSWorker extends HyperionWorker {
                     }
                 }
 
-                let light_block : Partial<HyperionLightBlock> = {
+                light_block = {
                     '@timestamp': block['timestamp'],
                     block_num: res['this_block']['block_num'],
                     block_id: res['this_block']['block_id'].toLowerCase(),
@@ -509,7 +514,7 @@ export default class MainDSWorker extends HyperionWorker {
         if (trace['action_traces'][0] && trace['action_traces'][0].length === 2) {
             first_action = trace['action_traces'][0][1];
 
-            // replace first action if the root is sysio.null::nonce
+            // replace first action if the root is eosio.null::nonce
             if (first_action.act.account === this.conf.settings.sysio_alias + '.null' && first_action.act.name === 'nonce') {
                 if (trace['action_traces'][1] && trace['action_traces'][1].length === 2) {
                     first_action = trace['action_traces'][1][1];
@@ -934,7 +939,7 @@ export default class MainDSWorker extends HyperionWorker {
         const row_sb = this.createSerialBuffer(Serialize.hexToUint8Array(row['value']));
         let error;
         try {
-            const tableType: Serialize.Type = await this.getTableType(row['code'], row['table'], block);
+            const tableType: Type = await this.getTableType(row['code'], row['table'], block);
             if (tableType) {
                 try {
                     row['data'] = tableType.deserialize(row_sb);
@@ -1201,7 +1206,7 @@ export default class MainDSWorker extends HyperionWorker {
                     const abiHex = account['abi'];
                     const abiBin = new Uint8Array(Buffer.from(abiHex, 'hex'));
                     const initialTypes = Serialize.createInitialTypes();
-                    const abiDefTypes: Serialize.Type = Serialize.getTypesFromAbi(initialTypes, <RpcInterfaces.Abi>AbiDefinitions).get('abi_def');
+                    const abiDefTypes: Type = Serialize.getTypesFromAbi(initialTypes, <Abi>AbiDefinitions).get('abi_def');
                     const abiObj = abiDefTypes.deserialize(this.createSerialBuffer(abiBin));
                     const jsonABIString = JSON.stringify(abiObj);
                     const abi_actions = abiObj.actions.map(a => a.name);
@@ -1500,7 +1505,6 @@ export default class MainDSWorker extends HyperionWorker {
     }
 
     deserializeNative(datatype: string, array: any): any {
-        // hLog('TESTING', datatype, array);
         if (this.abi) {
             try {
                 if (typeof array === 'string') {
@@ -1509,14 +1513,13 @@ export default class MainDSWorker extends HyperionWorker {
                     return this.abieos.binToJson("0", datatype, array);
                 }
             } catch (e) {
-                hLog(e)
-                hLog('!! deserializeNative >>', datatype, '>>', e.message, '>> is string:', typeof array === 'string');
+                hLog('deserializeNative >>', datatype, '>>', e.message);
             }
             return null;
         }
     }
 
-    async deserializeActionAtBlockNative(action: Serialize.Action, block_num: number): Promise<any> {
+    async deserializeActionAtBlockNative(action: Action, block_num: number): Promise<any> {
         const [status, actionType] = await this.verifyLocalType(action.account, action.name, block_num, "action");
         if (status) {
             try {
