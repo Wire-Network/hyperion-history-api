@@ -587,7 +587,7 @@ export function chainApiHandler(fastify: FastifyInstance) {
         const [cachedData, hash, path] = fastify.cacheManager.getCachedData(request);
         if (cachedData) {
             console.log('cache hit:', path, hash);
-            reply.headers({'hyperion-cached': true}).send(cachedData);
+            reply.headers({'hyperion-cached': 'true'}).send(cachedData);
         } else {
             // call actual request
             const apiResponse = await handleChainApiRedirect(request, reply, fastify);
