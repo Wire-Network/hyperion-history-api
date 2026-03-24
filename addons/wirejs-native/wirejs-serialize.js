@@ -516,14 +516,16 @@ var timePointSecToDate = function (sec) {
     return s.substr(0, s.length - 1);
 };
 exports.timePointSecToDate = timePointSecToDate;
-/** Convert date in ISO format to `block_timestamp_type` (half-seconds since a different epoch) */
+/** Convert date in ISO format to `block_timestamp_type` (half-seconds since epoch) */
+// Wire block_timestamp epoch: 1735689600000 ms = Jan 1, 2025 00:00:00 UTC
 var dateToBlockTimestamp = function (date) {
-    return Math.round((checkDateParse(date + "Z") - 946684800000) / 500);
+    return Math.round((checkDateParse(date + "Z") - 1735689600000 /* Wire epoch */) / 500);
 };
 exports.dateToBlockTimestamp = dateToBlockTimestamp;
-/** Convert `block_timestamp_type` (half-seconds since a different epoch) to to date in ISO format */
+/** Convert `block_timestamp_type` (half-seconds since epoch) to date in ISO format */
+// Wire block_timestamp epoch: 1735689600000 ms = Jan 1, 2025 00:00:00 UTC
 var blockTimestampToDate = function (slot) {
-    var s = new Date(slot * 500 + 946684800000).toISOString();
+    var s = new Date(slot * 500 + 1735689600000 /* Wire epoch */).toISOString();
     return s.substr(0, s.length - 1);
 };
 exports.blockTimestampToDate = blockTimestampToDate;
