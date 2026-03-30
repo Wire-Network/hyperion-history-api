@@ -1529,6 +1529,42 @@ var getTypesFromAbi = function (initialTypes, abi) {
             finally { if (e_8) throw e_8.error; }
         }
     }
+    if (abi && abi.enums) {
+        for (var _enum_i = 0; _enum_i < abi.enums.length; _enum_i++) {
+            var enumDef = abi.enums[_enum_i];
+            var underlyingType = (0, exports.getType)(types, enumDef.type);
+            var enumValues = enumDef.values;
+            types.set(enumDef.name, createType({
+                name: enumDef.name,
+                serialize: (function(ut, vals) {
+                    return function(buffer, data) {
+                        var numVal;
+                        if (typeof data === "string") {
+                            var entry = vals.find(function(v) { return v.name === data; });
+                            if (entry !== undefined) {
+                                numVal = entry.value;
+                            } else {
+                                numVal = +data;
+                                if (isNaN(numVal)) {
+                                    throw new Error("Unknown enum value: " + data);
+                                }
+                            }
+                        } else {
+                            numVal = data;
+                        }
+                        ut.serialize(buffer, numVal);
+                    };
+                })(underlyingType, enumValues),
+                deserialize: (function(ut, vals) {
+                    return function(buffer) {
+                        var numVal = ut.deserialize(buffer);
+                        var entry = vals.find(function(v) { return v.value === +numVal; });
+                        return entry ? entry.name : String(numVal);
+                    };
+                })(underlyingType, enumValues),
+            }));
+        }
+    }
     try {
         for (var types_1 = __values(types), types_1_1 = types_1.next(); !types_1_1.done; types_1_1 = types_1.next()) {
             var _q = __read(types_1_1.value, 2), name_3 = _q[0], type = _q[1];
