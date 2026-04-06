@@ -1128,6 +1128,132 @@ export default class MainDSWorker extends HyperionWorker {
         }
     }
 
+    // Decode 8 big-endian bytes at offset to an EOSIO name string
+    decodeEosioNameBE(buf: Buffer, offset: number): string {
+        const charmap = '.12345abcdefghijklmnopqrstuvwxyz';
+        const raw = buf.readBigUInt64BE(offset);
+        let name = '';
+        for (let i = 0; i < 13; i++) {
+            if (i === 12) {
+                name += charmap[Number(raw & 0x0Fn)];
+            } else {
+                const shift = BigInt(64 - 5 * (i + 1));
+                name += charmap[Number((raw >> shift) & 0x1Fn)];
+            }
+        }
+        // Strip trailing dots
+        return name.replace(/\.+$/, '') || '.';
+    }
+
+    // Decode big-endian KV key bytes using key_names/key_types from contract ABI.
+    // Matches the encoding produced by CDT's be_key_stream:
+    //   - Unsigned integers: big-endian
+    //   - Signed integers: XOR sign bit then big-endian (sort-preserving)
+    //   - Floats/doubles: IEEE 754 sign-magnitude to unsigned sortable transform
+    //   - Strings/vectors: NUL-escape encoding (0x00 -> 0x00 0x01, terminated by 0x00 0x00)
+    decodeBEKey(hexData: string, keyNames: string[], keyTypes: string[]): Record<string, any> {
+        const buf = Buffer.from(hexData, 'hex');
+        let offset = 0;
+        const result: Record<string, any> = {};
+
+        for (let i = 0; i < keyNames.length && offset < buf.length; i++) {
+            const name = keyNames[i];
+            const type = keyTypes[i];
+
+            switch (type) {
+                case 'bool':
+                    result[name] = buf[offset] !== 0;
+                    offset += 1; break;
+                case 'uint8':
+                    result[name] = buf[offset];
+                    offset += 1; break;
+                case 'int8': {
+                    const v = buf[offset] ^ 0x80;
+                    result[name] = v > 127 ? v - 256 : v;
+                    offset += 1; break;
+                }
+                case 'uint16':
+                    result[name] = buf.readUInt16BE(offset); offset += 2; break;
+                case 'int16': {
+                    const v = buf.readUInt16BE(offset) ^ 0x8000;
+                    result[name] = v > 32767 ? v - 65536 : v;
+                    offset += 2; break;
+                }
+                case 'uint32':
+                    result[name] = buf.readUInt32BE(offset); offset += 4; break;
+                case 'int32': {
+                    const v = buf.readUInt32BE(offset) ^ 0x80000000;
+                    result[name] = v > 2147483647 ? v - 4294967296 : v;
+                    offset += 4; break;
+                }
+                case 'uint64':
+                    result[name] = buf.readBigUInt64BE(offset).toString(); offset += 8; break;
+                case 'int64': {
+                    const raw = buf.readBigUInt64BE(offset) ^ (1n << 63n);
+                    // Convert unsigned to signed
+                    const signed = raw > 0x7FFFFFFFFFFFFFFFn ? raw - 0x10000000000000000n : raw;
+                    result[name] = signed.toString();
+                    offset += 8; break;
+                }
+                case 'name':
+                    result[name] = this.decodeEosioNameBE(buf, offset); offset += 8; break;
+                case 'uint128': {
+                    const hi = buf.readBigUInt64BE(offset);
+                    const lo = buf.readBigUInt64BE(offset + 8);
+                    result[name] = '0x' + hi.toString(16).padStart(16, '0') + lo.toString(16).padStart(16, '0');
+                    offset += 16; break;
+                }
+                case 'int128': {
+                    let hi = buf.readBigUInt64BE(offset);
+                    const lo = buf.readBigUInt64BE(offset + 8);
+                    hi ^= (1n << 63n); // reverse sign bit XOR
+                    result[name] = '0x' + hi.toString(16).padStart(16, '0') + lo.toString(16).padStart(16, '0');
+                    offset += 16; break;
+                }
+                case 'float32': case 'float': {
+                    let bits = buf.readUInt32BE(offset);
+                    if (bits & 0x80000000) bits ^= 0x80000000;
+                    else bits = ~bits >>> 0;
+                    const tmpBuf = Buffer.alloc(4);
+                    tmpBuf.writeUInt32LE(bits);
+                    result[name] = tmpBuf.readFloatLE(0);
+                    offset += 4; break;
+                }
+                case 'float64': case 'double': {
+                    let bits = buf.readBigUInt64BE(offset);
+                    if (bits >> 63n) bits ^= (1n << 63n);
+                    else bits = ~bits & 0xFFFFFFFFFFFFFFFFn;
+                    const tmpBuf = Buffer.alloc(8);
+                    tmpBuf.writeBigUInt64LE(bits);
+                    result[name] = tmpBuf.readDoubleLE(0);
+                    offset += 8; break;
+                }
+                case 'string': {
+                    // NUL-escape decoding: 0x00 0x01 -> 0x00, terminated by 0x00 0x00
+                    const bytes: number[] = [];
+                    while (offset < buf.length) {
+                        const c = buf[offset++];
+                        if (c === 0) {
+                            if (offset >= buf.length) break; // truncated
+                            const next = buf[offset++];
+                            if (next === 0) break; // terminator 0x00 0x00
+                            // next === 0x01: escaped NUL
+                            bytes.push(0);
+                        } else {
+                            bytes.push(c);
+                        }
+                    }
+                    result[name] = Buffer.from(bytes).toString('utf8');
+                    break;
+                }
+                default:
+                    result[name] = buf.subarray(offset).toString('hex');
+                    offset = buf.length; break;
+            }
+        }
+        return result;
+    }
+
     deltaStructHandlers = {
 
         "contract_row": async (payload, block_num, block_ts, row, block_id) => {
@@ -1439,21 +1565,134 @@ export default class MainDSWorker extends HyperionWorker {
         //     hLog(block_num, code);
         // },
 
-        // "contract_index_double": async (contract_index_double, block_num, block_ts, row, block_id) => {
-        //     return;
-        // },
+        // Wire KV format=0 rows (raw_table, indexed_table, global). Keys are
+        // big-endian encoded with structure from ABI key_names/key_types. Values
+        // use standard ABI serialization (LE).
+        // Format=1 rows (kv::table, multi_index) are handled by contract_row
+        // via SHiP's legacy translation layer.
+        "contract_row_kv": async (payload, block_num, block_ts, row, block_id) => {
 
-        // "contract_index64": async (cIndex64, block_num, block_ts, row, block_id) => {
-        //     return;
-        // },
+            if (this.conf.indexer.abi_scan_mode) {
+                return false;
+            }
 
-        // "contract_index128": async (cIndex128, block_num, block_ts, row, block_id) => {
-        //     return;
-        // },
+            // Only handle format=0 (raw BE keys). Format=1 is handled by contract_row.
+            if (payload.key_format !== 0) {
+                return false;
+            }
 
-        // "contract_table": async (contract_table, block_num, block_ts, row, block_id) => {
-        //     return;
-        // },
+            if (this.conf.features.index_all_deltas ||
+                (payload.code === this.conf.settings.sysio_alias)) {
+
+                payload['@timestamp'] = block_ts;
+                payload['present'] = row.present;
+                payload['block_num'] = block_num;
+                payload['block_id'] = block_id;
+
+                // Resolve KV table from contract ABI by finding tables with
+                // populated key_names/key_types (indicates format=0 KV table)
+                let kvTable = null;
+                try {
+                    let savedAbi = await this.fetchAbiHexAtBlockElastic(payload.code, block_num, true);
+                    if (!savedAbi) {
+                        savedAbi = await this.getAbiFromHeadBlock(payload.code);
+                    }
+                    if (savedAbi && savedAbi.abi) {
+                        const abiObj = typeof savedAbi.abi === 'string' ? JSON.parse(savedAbi.abi) : savedAbi.abi;
+                        if (abiObj.tables) {
+                            const kvTables = abiObj.tables.filter(t =>
+                                t.key_names && t.key_names.length > 0 &&
+                                t.key_types && t.key_types.length > 0
+                            );
+                            if (kvTables.length === 1) {
+                                kvTable = kvTables[0];
+                            } else if (kvTables.length > 1) {
+                                // Multiple KV tables — try each, pick the one whose
+                                // key_types produce an exact-length decode
+                                const keyHex = payload.key || '';
+                                for (const candidate of kvTables) {
+                                    try {
+                                        const testResult = this.decodeBEKey(keyHex, candidate.key_names, candidate.key_types);
+                                        if (Object.keys(testResult).length === candidate.key_names.length) {
+                                            kvTable = candidate;
+                                            break;
+                                        }
+                                    } catch (_) { /* try next */ }
+                                }
+                            }
+                        }
+
+                        if (kvTable) {
+                            payload['table'] = kvTable.name;
+
+                            // Decode BE key fields using key_names/key_types
+                            const keyHex = payload.key || '';
+                            if (keyHex.length > 0 && kvTable.key_names.length > 0) {
+                                try {
+                                    const keyData = this.decodeBEKey(keyHex, kvTable.key_names, kvTable.key_types);
+                                    payload['kv_key'] = keyData;
+                                    const firstField = kvTable.key_names[0];
+                                    if (keyData[firstField] !== undefined) {
+                                        payload['primary_key'] = String(keyData[firstField]);
+                                    }
+                                } catch (e) {
+                                    debugLog('BE key decode failed:', e);
+                                }
+                            }
+
+                            // Deserialize value using the table's struct type
+                            try {
+                                payload['data'] = this.abieos.hexToJson(payload.code, kvTable.type, payload.value);
+                                delete payload.value;
+                            } catch (e) {
+                                debugLog('KV value deserialization failed:', e);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    debugLog('KV ABI resolution failed:', e);
+                }
+
+                // Defaults for unresolved fields
+                if (!payload['table']) payload['table'] = '';
+                if (!payload['scope']) payload['scope'] = '';
+                if (!payload['primary_key']) payload['primary_key'] = '';
+
+                if (this.checkDeltaBlacklist(payload)) {
+                    return false;
+                }
+
+                if (this.filters.delta_whitelist.size > 0) {
+                    if (!this.checkDeltaWhitelist(payload)) {
+                        return false;
+                    }
+                }
+
+                if (await this.processTableDelta(payload)) {
+                    if (!this.conf.indexer.disable_indexing && this.conf.features.index_deltas) {
+
+                        await this.mLoader.processDeltaData(payload);
+
+                        const buff = bufferFromJson(payload);
+                        if (process.env['live_mode'] === 'true') {
+                            this.pushToDeltaStreamingQueue(buff, payload);
+                        }
+
+                        if (typeof row.present !== "undefined") {
+                            if (row.present === 1 || row.present === true) {
+                                await this.pushToDeltaQueue(buff, block_num);
+                            }
+                        }
+                        this.temp_delta_counter++;
+                    }
+                }
+            }
+        },
+
+        // Wire KV secondary index deltas — not indexed (matches legacy behavior)
+        "contract_index_kv": async (_payload, _block_num, _block_ts, _row, _block_id) => {
+            return;
+        },
     }
 
     async processDeltas(deltas, block_num, block_ts, block_id) {
