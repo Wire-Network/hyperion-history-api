@@ -19,6 +19,7 @@
         "hyperion-explorer",
         "build",
         "plugins/repos",
+        "addons/node-abieos/abieos",  // exclude abieos nested repo (test/external ts files)
         "addons/node-abieos/build/CMakeFiles/abieos.dir/*.ts",  // exclude cmake ts build files for abieos
         "addons/node-abieos/build/CMakeFiles/node_abieos.dir/*.ts"  // exclude cmake ts build files for node-abieos
     ]
