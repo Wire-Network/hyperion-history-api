@@ -1146,6 +1146,11 @@ export default class MainDSWorker extends HyperionWorker {
     }
 
     // Decode big-endian KV key bytes using key_names/key_types from contract ABI.
+    // Matches the encoding produced by CDT's be_key_stream:
+    //   - Unsigned integers: big-endian
+    //   - Signed integers: XOR sign bit then big-endian (sort-preserving)
+    //   - Floats/doubles: IEEE 754 sign-magnitude to unsigned sortable transform
+    //   - Strings/vectors: NUL-escape encoding (0x00 -> 0x00 0x01, terminated by 0x00 0x00)
     decodeBEKey(hexData: string, keyNames: string[], keyTypes: string[]): Record<string, any> {
         const buf = Buffer.from(hexData, 'hex');
         let offset = 0;
@@ -1156,15 +1161,40 @@ export default class MainDSWorker extends HyperionWorker {
             const type = keyTypes[i];
 
             switch (type) {
-                case 'uint8': case 'bool':
-                    result[name] = type === 'bool' ? buf[offset] !== 0 : buf[offset];
+                case 'bool':
+                    result[name] = buf[offset] !== 0;
                     offset += 1; break;
+                case 'uint8':
+                    result[name] = buf[offset];
+                    offset += 1; break;
+                case 'int8': {
+                    const v = buf[offset] ^ 0x80;
+                    result[name] = v > 127 ? v - 256 : v;
+                    offset += 1; break;
+                }
                 case 'uint16':
                     result[name] = buf.readUInt16BE(offset); offset += 2; break;
+                case 'int16': {
+                    const v = buf.readUInt16BE(offset) ^ 0x8000;
+                    result[name] = v > 32767 ? v - 65536 : v;
+                    offset += 2; break;
+                }
                 case 'uint32':
                     result[name] = buf.readUInt32BE(offset); offset += 4; break;
-                case 'uint64': case 'int64':
+                case 'int32': {
+                    const v = buf.readUInt32BE(offset) ^ 0x80000000;
+                    result[name] = v > 2147483647 ? v - 4294967296 : v;
+                    offset += 4; break;
+                }
+                case 'uint64':
                     result[name] = buf.readBigUInt64BE(offset).toString(); offset += 8; break;
+                case 'int64': {
+                    const raw = buf.readBigUInt64BE(offset) ^ (1n << 63n);
+                    // Convert unsigned to signed
+                    const signed = raw > 0x7FFFFFFFFFFFFFFFn ? raw - 0x10000000000000000n : raw;
+                    result[name] = signed.toString();
+                    offset += 8; break;
+                }
                 case 'name':
                     result[name] = this.decodeEosioNameBE(buf, offset); offset += 8; break;
                 case 'uint128': {
@@ -1172,6 +1202,22 @@ export default class MainDSWorker extends HyperionWorker {
                     const lo = buf.readBigUInt64BE(offset + 8);
                     result[name] = '0x' + hi.toString(16).padStart(16, '0') + lo.toString(16).padStart(16, '0');
                     offset += 16; break;
+                }
+                case 'int128': {
+                    let hi = buf.readBigUInt64BE(offset);
+                    const lo = buf.readBigUInt64BE(offset + 8);
+                    hi ^= (1n << 63n); // reverse sign bit XOR
+                    result[name] = '0x' + hi.toString(16).padStart(16, '0') + lo.toString(16).padStart(16, '0');
+                    offset += 16; break;
+                }
+                case 'float32': case 'float': {
+                    let bits = buf.readUInt32BE(offset);
+                    if (bits & 0x80000000) bits ^= 0x80000000;
+                    else bits = ~bits >>> 0;
+                    const tmpBuf = Buffer.alloc(4);
+                    tmpBuf.writeUInt32LE(bits);
+                    result[name] = tmpBuf.readFloatLE(0);
+                    offset += 4; break;
                 }
                 case 'float64': case 'double': {
                     let bits = buf.readBigUInt64BE(offset);
@@ -1183,10 +1229,21 @@ export default class MainDSWorker extends HyperionWorker {
                     offset += 8; break;
                 }
                 case 'string': {
-                    const start = offset;
-                    while (offset < buf.length && buf[offset] !== 0) offset++;
-                    result[name] = buf.subarray(start, offset).toString('utf8');
-                    if (offset < buf.length) offset++;
+                    // NUL-escape decoding: 0x00 0x01 -> 0x00, terminated by 0x00 0x00
+                    const bytes: number[] = [];
+                    while (offset < buf.length) {
+                        const c = buf[offset++];
+                        if (c === 0) {
+                            if (offset >= buf.length) break; // truncated
+                            const next = buf[offset++];
+                            if (next === 0) break; // terminator 0x00 0x00
+                            // next === 0x01: escaped NUL
+                            bytes.push(0);
+                        } else {
+                            bytes.push(c);
+                        }
+                    }
+                    result[name] = Buffer.from(bytes).toString('utf8');
                     break;
                 }
                 default:
@@ -1508,13 +1565,19 @@ export default class MainDSWorker extends HyperionWorker {
         //     hLog(block_num, code);
         // },
 
-        // Wire KV raw rows (key_format=0). Keys are big-endian encoded with a
-        // structure defined by the contract's ABI key_names/key_types. Values use
-        // standard ABI serialization (LE). The handler resolves the kv::map table
-        // from the contract ABI, decodes the key (BE), and deserializes the value.
+        // Wire KV format=0 rows (raw_table, indexed_table, global). Keys are
+        // big-endian encoded with structure from ABI key_names/key_types. Values
+        // use standard ABI serialization (LE).
+        // Format=1 rows (kv::table, multi_index) are handled by contract_row
+        // via SHiP's legacy translation layer.
         "contract_row_kv": async (payload, block_num, block_ts, row, block_id) => {
 
             if (this.conf.indexer.abi_scan_mode) {
+                return false;
+            }
+
+            // Only handle format=0 (raw BE keys). Format=1 is handled by contract_row.
+            if (payload.key_format !== 0) {
                 return false;
             }
 
@@ -1526,8 +1589,8 @@ export default class MainDSWorker extends HyperionWorker {
                 payload['block_num'] = block_num;
                 payload['block_id'] = block_id;
 
-                // Resolve kv::map table from contract ABI by finding a table
-                // with populated key_names/key_types (indicates kv::map usage)
+                // Resolve KV table from contract ABI by finding tables with
+                // populated key_names/key_types (indicates format=0 KV table)
                 let kvTable = null;
                 try {
                     let savedAbi = await this.fetchAbiHexAtBlockElastic(payload.code, block_num, true);
@@ -1537,10 +1600,26 @@ export default class MainDSWorker extends HyperionWorker {
                     if (savedAbi && savedAbi.abi) {
                         const abiObj = typeof savedAbi.abi === 'string' ? JSON.parse(savedAbi.abi) : savedAbi.abi;
                         if (abiObj.tables) {
-                            kvTable = abiObj.tables.find(t =>
+                            const kvTables = abiObj.tables.filter(t =>
                                 t.key_names && t.key_names.length > 0 &&
                                 t.key_types && t.key_types.length > 0
                             );
+                            if (kvTables.length === 1) {
+                                kvTable = kvTables[0];
+                            } else if (kvTables.length > 1) {
+                                // Multiple KV tables — try each, pick the one whose
+                                // key_types produce an exact-length decode
+                                const keyHex = payload.key || '';
+                                for (const candidate of kvTables) {
+                                    try {
+                                        const testResult = this.decodeBEKey(keyHex, candidate.key_names, candidate.key_types);
+                                        if (Object.keys(testResult).length === candidate.key_names.length) {
+                                            kvTable = candidate;
+                                            break;
+                                        }
+                                    } catch (_) { /* try next */ }
+                                }
+                            }
                         }
 
                         if (kvTable) {
@@ -1566,12 +1645,12 @@ export default class MainDSWorker extends HyperionWorker {
                                 payload['data'] = this.abieos.hexToJson(payload.code, kvTable.type, payload.value);
                                 delete payload.value;
                             } catch (e) {
-                                debugLog('kv::map value deserialization failed:', e);
+                                debugLog('KV value deserialization failed:', e);
                             }
                         }
                     }
                 } catch (e) {
-                    debugLog('kv::map ABI resolution failed:', e);
+                    debugLog('KV ABI resolution failed:', e);
                 }
 
                 // Defaults for unresolved fields
