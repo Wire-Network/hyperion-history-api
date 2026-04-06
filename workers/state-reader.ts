@@ -211,7 +211,7 @@ export default class StateReader extends HyperionWorker {
         this.local_last_block = data.last_block;
 
         // make sure no data is requested from before the first indexed block on ship
-        if (parseInt(data.first_block) < this.shipInitStatus['trace_begin_block']) {
+        if (this.shipInitStatus && parseInt(data.first_block) < this.shipInitStatus['trace_begin_block']) {
             data.first_block = this.shipInitStatus['trace_begin_block'];
             hLog("Impossible to repair requested range, first block is before the first indexed block on ship, trimming to " + data.first_block);
         }
