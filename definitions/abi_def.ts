@@ -80,12 +80,38 @@ export const AbiDefinitions = {
             ],
         },
         {
+            // Per-secondary-index metadata embedded in table_def.
+            // Mirrors sysio::chain::index_def in libraries/chain/include/sysio/chain/abi_def.hpp.
+            name: 'index_def',
+            base: '',
+            fields: [
+                {
+                    name: 'name',
+                    type: 'string',
+                },
+                {
+                    name: 'key_type',
+                    type: 'string',
+                },
+                {
+                    name: 'table_id',
+                    type: 'uint16',
+                },
+            ],
+        },
+        {
+            // Wire-sysio table_def gained `table_id` (uint16) and `secondary_indexes`
+            // in PR Wire-Network/wire-sysio#288, and `name` was widened from sysio::name
+            // to a free-form string so long table names work. The binary format change
+            // means old hyperion deserializers cannot parse new ABIs at all — fields
+            // after `name` would be misaligned. Mirrors sysio::chain::table_def in
+            // libraries/chain/include/sysio/chain/abi_def.hpp.
             name: 'table_def',
             base: '',
             fields: [
                 {
                     name: 'name',
-                    type: 'name',
+                    type: 'string',
                 },
                 {
                     name: 'index_type',
@@ -102,6 +128,14 @@ export const AbiDefinitions = {
                 {
                     name: 'type',
                     type: 'string',
+                },
+                {
+                    name: 'table_id',
+                    type: 'uint16',
+                },
+                {
+                    name: 'secondary_indexes',
+                    type: 'index_def[]',
                 },
             ],
         },
