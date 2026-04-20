@@ -1576,10 +1576,13 @@ export default class MainDSWorker extends HyperionWorker {
                 return false;
             }
 
-            // Only handle format=0 (raw BE keys). Format=1 is handled by contract_row.
-            if (payload.key_format !== 0) {
-                return false;
-            }
+            // Wire-sysio PR #288 (table_id namespace isolation) replaced the legacy
+            // `key_format` discriminator with a per-table `table_id` (uint16, DJB2
+            // hash of the table name % 65536) computed at compile time by CDT and
+            // emitted on every contract_row_kv_v0 SHiP delta. The new payload shape
+            // is { code, payer, table_id, key, value } — no more `scope`, `table`,
+            // or `key_format` fields. We resolve the table name by matching the
+            // payload's table_id against table_def.table_id from the contract's ABI.
 
             if (this.conf.features.index_all_deltas ||
                 (payload.code === this.conf.settings.sysio_alias)) {
@@ -1589,8 +1592,7 @@ export default class MainDSWorker extends HyperionWorker {
                 payload['block_num'] = block_num;
                 payload['block_id'] = block_id;
 
-                // Resolve KV table from contract ABI by finding tables with
-                // populated key_names/key_types (indicates format=0 KV table)
+                // Resolve the table_def whose table_id matches the payload's.
                 let kvTable = null;
                 try {
                     let savedAbi = await this.fetchAbiHexAtBlockElastic(payload.code, block_num, true);
@@ -1599,48 +1601,52 @@ export default class MainDSWorker extends HyperionWorker {
                     }
                     if (savedAbi && savedAbi.abi) {
                         const abiObj = typeof savedAbi.abi === 'string' ? JSON.parse(savedAbi.abi) : savedAbi.abi;
-                        if (abiObj.tables) {
-                            const kvTables = abiObj.tables.filter(t =>
-                                t.key_names && t.key_names.length > 0 &&
-                                t.key_types && t.key_types.length > 0
-                            );
-                            if (kvTables.length === 1) {
-                                kvTable = kvTables[0];
-                            } else if (kvTables.length > 1) {
-                                // Multiple KV tables — try each, pick the one whose
-                                // key_types produce an exact-length decode
-                                const keyHex = payload.key || '';
-                                for (const candidate of kvTables) {
-                                    try {
-                                        const testResult = this.decodeBEKey(keyHex, candidate.key_names, candidate.key_types);
-                                        if (Object.keys(testResult).length === candidate.key_names.length) {
-                                            kvTable = candidate;
-                                            break;
-                                        }
-                                    } catch (_) { /* try next */ }
-                                }
-                            }
+                        if (abiObj.tables && payload.table_id !== undefined) {
+                            kvTable = abiObj.tables.find(t => t.table_id === payload.table_id) || null;
                         }
 
                         if (kvTable) {
+                            // Setting `table` is required for the *:accounts and other
+                            // table-routed handlers in processTableDelta() to fire.
                             payload['table'] = kvTable.name;
 
-                            // Decode BE key fields using key_names/key_types
+                            // Decode the full primary key — for scoped tables this is
+                            // [scope:8B BE][pk encoded] and the leading field will be
+                            // 'scope'. We expose the leading field as `primary_key` for
+                            // index compatibility with the legacy contract_row path.
                             const keyHex = payload.key || '';
-                            if (keyHex.length > 0 && kvTable.key_names.length > 0) {
+                            if (keyHex.length > 0 && kvTable.key_names && kvTable.key_names.length > 0) {
                                 try {
                                     const keyData = this.decodeBEKey(keyHex, kvTable.key_names, kvTable.key_types);
                                     payload['kv_key'] = keyData;
-                                    const firstField = kvTable.key_names[0];
-                                    if (keyData[firstField] !== undefined) {
-                                        payload['primary_key'] = String(keyData[firstField]);
+                                    // For scoped tables key_names[0] === 'scope'; mirror
+                                    // it into payload.scope so handlers that index by
+                                    // scope (e.g. *:accounts → ES doc.scope) keep working
+                                    // identically to the legacy contract_row path.
+                                    if (kvTable.key_names[0] === 'scope' && keyData['scope'] !== undefined) {
+                                        payload['scope'] = String(keyData['scope']);
+                                        // primary_key is the next field after scope.
+                                        if (kvTable.key_names.length > 1) {
+                                            const pkField = kvTable.key_names[1];
+                                            if (keyData[pkField] !== undefined) {
+                                                payload['primary_key'] = String(keyData[pkField]);
+                                            }
+                                        }
+                                    } else {
+                                        // Unscoped table: first field is the primary key.
+                                        const firstField = kvTable.key_names[0];
+                                        if (keyData[firstField] !== undefined) {
+                                            payload['primary_key'] = String(keyData[firstField]);
+                                        }
                                     }
                                 } catch (e) {
                                     debugLog('BE key decode failed:', e);
                                 }
                             }
 
-                            // Deserialize value using the table's struct type
+                            // Deserialize value using the table's struct type. Stored
+                            // in `data` to match the legacy contract_row layout that
+                            // downstream handlers (e.g. *:accounts) read from.
                             try {
                                 payload['data'] = this.abieos.hexToJson(payload.code, kvTable.type, payload.value);
                                 delete payload.value;
